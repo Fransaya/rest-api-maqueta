@@ -1,24 +1,27 @@
-import axios from 'axios';
+import axios from "axios";
+import dotenv from "dotenv";
 
-const BASE_URL = 'http://localhost';
+dotenv.config();
+
+const BASE_URL = "http://localhost";
 const AUTH_PORT = process.env.AUTH_PORT;
 
 const verifyAccessToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res
       .status(401)
-      .json({ message: 'Acceso no autorizado: Token no proporcionado' });
+      .json({ message: "Acceso no autorizado: Token no proporcionado" });
   }
 
-  const accessToken = authHeader.split(' ')[1];
+  const accessToken = authHeader.split(" ")[1];
 
   try {
     const response = await axios({
-      method: 'post',
+      method: "post",
       url: `${BASE_URL}:${AUTH_PORT}/validate-token`,
-      data: { accessToken }
+      data: { accessToken },
     });
 
     // Si el access token es válido y no expiró
@@ -28,31 +31,31 @@ const verifyAccessToken = async (req, res, next) => {
 
     next();
   } catch (err) {
-    if (err.response?.data?.error === 'TokenExpiredError') {
+    if (err.response?.data?.error === "TokenExpiredError") {
       // Si el access token expiró
-      const refreshToken = req.headers['x-refresh-token'];
+      const refreshToken = req.headers["x-refresh-token"];
 
       // Si no se proporcionó un refresh token
       if (!refreshToken) {
         return res.status(401).json({
           message:
-            'Token expirado. Refresh token requerido. Vuelva a iniciar sesión'
+            "Token expirado. Refresh token requerido. Vuelva a iniciar sesión",
         });
       }
 
       try {
         const refreshResponse = await axios({
-          method: 'post',
+          method: "post",
           url: `${BASE_URL}:${AUTH_PORT}/refresh`,
-          data: { refreshToken }
+          data: { refreshToken },
         });
 
         // Si se refrescó el token
         const { accessToken: newToken, user } = refreshResponse.data;
         req.user = user;
-        console.log('newToken:', newToken);
+        console.log("newToken:", newToken);
 
-        res.setHeader('x-new-token', newToken);
+        res.setHeader("x-new-token", newToken);
 
         return next();
       } catch (refreshErr) {
@@ -60,7 +63,7 @@ const verifyAccessToken = async (req, res, next) => {
         console.error(refreshErr.message);
         return res
           .status(401)
-          .json({ message: 'Token inválido. Vuelva a iniciar sesión' });
+          .json({ message: "Token inválido. Vuelva a iniciar sesión" });
       }
     }
 
@@ -68,7 +71,7 @@ const verifyAccessToken = async (req, res, next) => {
     console.error(err);
     return res
       .status(403)
-      .json({ message: 'Token inválido. Vuelva a iniciar sesión' });
+      .json({ message: "Token inválido. Vuelva a iniciar sesión" });
   }
 };
 
