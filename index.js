@@ -13,6 +13,9 @@ import validateToken from "./utils/auth/verifyToken.js";
 import refreshAccessToken from "./utils/auth/refreshToken.js";
 import generateToken from "./utils/auth/generateToken.js";
 
+// OpenAI SDK
+import OpenAI from "openai";
+
 // Load environment variables
 dotenv.config();
 
@@ -111,6 +114,31 @@ app.get("/protected", verifyAccessToken, (req, res) => {
       .json({ message: "Acceso concedido a ruta protegida", user: req.user });
   } catch (error) {
     res.status(500).json({ error: "Error al acceder a la ruta protegida" });
+  }
+});
+
+//* METODO DE REQUEST A OPEN AI
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000,
+  maxRetries: 2,
+});
+
+app.post("/openai", async (req, res) => {
+  const { prompt } = req.body;
+  try {
+    const response = await openai.responses.create({
+      model: "gpt4o-mini",
+      input: prompt,
+      max_output_tokens: 500,
+    });
+
+    res.status(200).json({ response });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Error al comunicarse con OpenAI", details: error });
   }
 });
 
